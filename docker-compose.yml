@@ -61,6 +61,25 @@ services:
     networks:
       - app-network
 
+  # ========================================
+  # phpMyAdmin データベース管理ツール
+  # ========================================
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest    # phpMyAdmin公式イメージ
+    container_name: app_phpmyadmin        # コンテナ名
+    environment:
+      PMA_HOST: db                       # 接続先MySQLホスト名
+      PMA_PORT: 3306                     # 接続先MySQLポート
+      PMA_USER: root                     # デフォルトログインユーザー
+      PMA_PASSWORD: rootpass             # デフォルトログインパスワード
+      MYSQL_ROOT_PASSWORD: rootpass      # MySQL rootパスワード
+    ports:
+      - "8081:80"                        # http://localhost:8081でアクセス
+    depends_on:
+      - db                               # MySQL起動後にphpMyAdmin起動
+    networks:
+      - app-network
+
 # ========================================
 # Docker ボリューム定義
 # ========================================
