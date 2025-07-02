@@ -1,0 +1,76 @@
+# Docker Compose設定ファイル
+# Laravel + Vue.js開発環境用
+version: '3.8'
+
+services:
+  # ========================================
+  # MySQL データベースサーバー
+  # ========================================
+  db:
+    image: mysql:8.0                    # MySQL 8.0公式イメージ
+    container_name: app_db            # コンテナ名を固定
+    environment:                        # 環境変数でDB設定
+      MYSQL_ROOT_PASSWORD: rootpass    # rootユーザーパスワード
+      MYSQL_DATABASE: laravel_db       # 作成するデータベース名
+      MYSQL_USER: laravel_user         # アプリ用ユーザー名
+      MYSQL_PASSWORD: laravel_pass     # アプリ用パスワード
+      TZ: 'Asia/Tokyo' # タイムゾーン
+    ports:
+      - "3306:3306"                    # ホスト:コンテナ ポート接続
+    volumes:
+      - mysql_data:/var/lib/mysql      # データ永続化用ボリューム
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf # 設定ファイル
+    networks:
+      - app-network
+  # ========================================
+  # Laravel Backend API サーバー
+  # ========================================
+  backend:
+    build:
+      context: ./backend               # ビルドコンテキスト
+      dockerfile: Dockerfile          # 使用するDockerfile
+    container_name: app_backend        # コンテナ名
+    volumes:
+      - ./backend:/var/www/html       # ホストとコンテナでコード同期
+      - ./docker/apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
+    ports:
+      - "8080:80" #公開ポート
+    depends_on:
+      - db                         # MySQL起動後にbackend起動
+    networks:
+      - app-network  
+
+  # =======================================
+  # Frontend(Vue.JS x Laravel(BFF))
+  # =======================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: app_frontend
+    ports:
+      - "3000:80" #公開ポート
+    volumes:
+      - ./frontend:/var/www/html
+      - /var/www/html/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true     # ファイル変更検知（Dockerで必要）
+      - NODE_ENV=development         # 開発環境設定
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+# ========================================
+# Docker ボリューム定義
+# ========================================
+volumes:
+  mysql_data:                          # MySQLデータ永続化ボリューム
+    # データベースの内容をDockerホストに保存
+    # コンテナ削除後もデータが残る
+# ========================================
+# Docker ネットワーク定義
+# ========================================
+networks:
+  app-network:
+    driver: bridge
